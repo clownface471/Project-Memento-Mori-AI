@@ -1,6 +1,35 @@
 # Impor library yang kita butuhkan
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
+from urllib.parse import urlparse, parse_qs
+import re
+
+def extract_video_id(url_or_id):
+    """
+    Fungsi cerdas untuk mengekstrak ID video dari berbagai format URL YouTube.
+    Jika input sudah berupa ID, ia akan mengembalikannya langsung.
+    """
+    # Pola regex untuk mencocokkan ID video YouTube yang valid (11 karakter)
+    if re.match(r'^[a-zA-Z0-9_-]{11}$', url_or_id):
+        return url_or_id
+    
+    # Jika input adalah URL, coba parsing
+    try:
+        parsed_url = urlparse(url_or_id)
+        if "youtube.com" in parsed_url.hostname:
+            # Untuk URL standar seperti /watch?v=...
+            if parsed_url.path == '/watch':
+                return parse_qs(parsed_url.query)['v'][0]
+            # Untuk URL pendek seperti /shorts/... atau /...
+            if parsed_url.path.startswith(('/embed/', '/shorts/', '/live/')):
+                return parsed_url.path.split('/')[2]
+        elif "youtu.be" in parsed_url.hostname:
+            # Untuk URL youtu.be/...
+            return parsed_url.path[1:]
+    except Exception:
+        return None # Gagal mengekstrak ID
+    
+    return None
 
 def get_and_save_transcript(video_id):
     """
@@ -9,18 +38,12 @@ def get_and_save_transcript(video_id):
     try:
         print(f"Mencoba mengambil transkrip untuk video ID: {video_id}...")
         
-        # Langkah 1: Panggil API untuk mendapatkan transkrip
-        # 'languages=['id', 'en']' berarti ia akan mencoba mencari transkrip B. Indonesia dulu,
-        # jika tidak ada, ia akan mencari transkrip B. Inggris.
         transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['id', 'en'])
 
         print("Transkrip berhasil ditemukan. Membersihkan teks...")
         
-        # Langkah 2: Proses transkrip untuk mendapatkan teks bersih
-        # Kita hanya mengambil bagian 'text' dari setiap segmen dalam transkrip
         full_transcript = " ".join([segment['text'] for segment in transcript_list])
         
-        # Langkah 3: Simpan teks bersih ke dalam file
         file_name = f"{video_id}_transcript.txt"
         with open(file_name, "w", encoding="utf-8") as f:
             f.write(full_transcript)
@@ -39,11 +62,17 @@ def get_and_save_transcript(video_id):
 if __name__ == "__main__":
     print("--- Alat Pengunduh Transkrip YouTube untuk Proyek Mori ---")
     
-    # Minta pengguna untuk memasukkan ID video YouTube
-    # Contoh ID: dari URL https://www.youtube.com/watch?v=dQw4w9WgXcQ, ID-nya adalah dQw4w9WgXcQ
-    target_video_id = input("Masukkan ID Video YouTube target: ")
+    # Minta pengguna untuk memasukkan URL atau ID video
+    user_input = input("Masukkan URL atau ID Video YouTube target: ")
     
-    if target_video_id:
-        get_and_save_transcript(target_video_id)
+    if user_input:
+        # Ekstrak ID video dari input pengguna
+        video_id = extract_video_id(user_input)
+        
+        if video_id:
+            get_and_save_transcript(video_id)
+        else:
+            print("Error: URL atau ID video tidak valid.")
     else:
-        print("Tidak ada ID video yang dimasukkan. Program berhenti.")
+        print("Tidak ada input yang dimasukkan. Program berhenti.")
+
