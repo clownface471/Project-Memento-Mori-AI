@@ -1,0 +1,12 @@
+# Python virtual environment
+.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Downloaded datasets from Hugging Face, etc.
+data/
+
+# Transcripts downloaded by our scraper
+*_transcript.txt
