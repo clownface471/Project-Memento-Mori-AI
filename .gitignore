@@ -1,5 +1,6 @@
 # Python virtual environment
 .venv/
+.venv_broken
 
 # Python cache files
 __pycache__/
